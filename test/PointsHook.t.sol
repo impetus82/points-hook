@@ -14,10 +14,11 @@ import {SwapParams} from "v4-core/types/PoolOperation.sol";
 import {ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {PoolSwapTest} from "v4-core/test/PoolSwapTest.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {ERC1155TokenReceiver} from "solmate/src/tokens/ERC1155.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
 
-contract PointsHookTest is Test, Deployers {
+contract PointsHookTest is Test, Deployers, ERC1155TokenReceiver {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
@@ -306,5 +307,41 @@ contract PointsHookTest is Test, Deployers {
         // Проверяем что контракт существует
         assertGt(hookAddr.code.length, 0, "LimitOrderHook must be deployed");
         console2.log("LimitOrderHook code size:", hookAddr.code.length);
+    }
+
+    /// @notice Официальный тест из UHI9 Workshop 4 LMS
+    /// @dev Проверяет точное значение: 20% от 0.001 ETH = 2 * 10**14 points
+    function test_swap() public {
+        uint256 poolIdUint = uint256(PoolId.unwrap(poolKey.toId()));
+        uint256 pointsBalanceOriginal = hook.balanceOf(
+            address(this),
+            poolIdUint
+        );
+
+        bytes memory hookData = abi.encode(address(this));
+
+        swapRouter.swap{value: 0.001 ether}(
+            poolKey,
+            SwapParams({
+                zeroForOne: true,
+                amountSpecified: -0.001 ether,
+                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+            }),
+            PoolSwapTest.TestSettings({
+                takeClaims: false,
+                settleUsingBurn: false
+            }),
+            hookData
+        );
+
+        uint256 pointsBalanceAfterSwap = hook.balanceOf(
+            address(this),
+            poolIdUint
+        );
+        assertEq(
+            pointsBalanceAfterSwap - pointsBalanceOriginal,
+            2 * 10 ** 14,
+            "points must equal exactly 20% of 0.001 ETH"
+        );
     }
 }
