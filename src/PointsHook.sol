@@ -15,12 +15,7 @@ import {Hooks} from "v4-core/libraries/Hooks.sol";
 contract PointsHook is BaseHook, ERC1155 {
     constructor(IPoolManager _manager) BaseHook(_manager) {}
 
-    function getHookPermissions()
-        public
-        pure
-        override
-        returns (Hooks.Permissions memory)
-    {
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
         return Hooks.Permissions({
             beforeInitialize: false,
             afterInitialize: false,
@@ -43,11 +38,7 @@ contract PointsHook is BaseHook, ERC1155 {
         return "https://api.example.com/token/{id}";
     }
 
-    function _assignPoints(
-        PoolId poolId,
-        bytes calldata hookData,
-        uint256 points
-    ) internal {
+    function _assignPoints(PoolId poolId, bytes calldata hookData, uint256 points) internal {
         if (hookData.length == 0) return;
         address user = abi.decode(hookData, (address));
         if (user == address(0)) return;
